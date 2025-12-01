@@ -101,7 +101,7 @@ Xsystem = S;                          % rename as Xsystem
 %
 % Make the y-position autopilot
 %
-P = tf(500,[1 500]);                  % plant is P
+P = tf(100,[1 100]);                  % plant is P
 I = tf(Vo,[1 0]);                     % integrator is I
 
 %
@@ -165,7 +165,7 @@ grid on
 %
 % STUDENT : Choose a control gain
 %
-Kp = 0.022;                           % proportional controller
+Kp = 0.035;                           % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
