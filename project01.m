@@ -54,11 +54,11 @@ grid on
 %
 % STUDENT : Choose control gains
 %
-Kp = 5.0;                             % proportional controller
-Ki = 0.5;                             % integral controller
-Kd = 0.2;                             % derivative controller
+Kp = 2.189;                           % proportional controller
+Ki = 0.078;                           % integral controller
+Kd = 0.157;                           % derivative controller
 
-%
+%   
 % Define PID controller
 %
 KP = Kp;                              % define proportional controller
@@ -101,7 +101,7 @@ Xsystem = S;                          % rename as Xsystem
 %
 % Make the y-position autopilot
 %
-P = tf(100,[1 100]);                  % plant is P
+P = tf(100,[1 100]);                  % plant is P CHANGED THE PLANT 
 I = tf(Vo,[1 0]);                     % integrator is I
 
 %
@@ -117,7 +117,7 @@ grid on
 %
 % STUDENT : Choose control gains
 %
-Kp = 0.6;                             % proportional controller
+Kp = 0.560;                           % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
@@ -165,7 +165,7 @@ grid on
 %
 % STUDENT : Choose a control gain
 %
-Kp = 0.035;                           % proportional controller
+Kp = 0.0236;                          % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
