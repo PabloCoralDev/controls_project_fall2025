@@ -59,10 +59,10 @@ def verify_specs():
     print("="*40 + "\n")
 
     # X-Position gains (from project01.m lines 57-59)
-    Kp_x, Ki_x, Kd_x = 2.153, 0.096, 0.133
+    Kp_x, Ki_x, Kd_x = 1.5, 0, .15
 
     # Y-Position gains (from project01.m)
-    Kp_phi = -0.981  # Inner loop (line 120)
+    Kp_phi = -0.9825  # Inner loop (line 120)
     Kp_y = -0.0001   # Outer loop (line 168)
 
     Vo = 70 * 1.467  # 70 mph to ft/s

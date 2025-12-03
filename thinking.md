@@ -48,5 +48,5 @@ left to do:
 --> upload ALL the stuff to a github repo in case prof wants to look at it
 --> Make a simple .tex report (claude can help me format later on)
 --> include figures from MATLAB output (put them in images folder in root)
-
+--> ENSURE I HAVE A REPORT OF CLAUDE DOUBLE CHECKING MY VERIFICATION PYTHON
 nice!
