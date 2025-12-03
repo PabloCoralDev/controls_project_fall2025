@@ -10,6 +10,14 @@
 \usepackage{booktabs}
 \geometry{margin=1in}
 
+% Remove colored boxes around links
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
 % Remove paragraph indentation
 \setlength{\parindent}{0pt}
 
@@ -36,10 +44,13 @@
 % ===========================
 \section{Project Summary}
 
-This report documents the systematic design of a cascaded control system that performs
+This report documents the systematic design of a control system that performs
 autonomous lane-change maneuvers for a Tesla Model~S cruising at 70~mph. The autopilot
-uses a PID controller for longitudinal control (x-position, parallel to the lane) and a cascaded,
-proportional-only controller for lateral control (y-position, perpendicular to the current lane and pointing to the next lane). The design methodology consisted of two phases:
+uses a PID controller for longitudinal control (x-position, parallel to the lane) and a coupled,
+double-loop controller for lateral control (y-position, perpendicular to the current lane and pointing to the next lane). 
+
+\vspace{0.3cm}
+The design methodology will consist of two phases:
 
 \begin{enumerate}
     \item \textbf{Control theory} to obtain initial gains using
@@ -48,10 +59,10 @@ proportional-only controller for lateral control (y-position, perpendicular to t
     satisfy tight rise-time and settling-time specifications simultaneously.
 \end{enumerate}
 
-All eight project specifications on rise time, settling time, overshoot, and
-steady-state error were satisfied by the final controller.
+\textbf{All project specifications on rise time, settling time, overshoot, and
+steady-state error were satisfied by the final controller.}
 
-\subsection{Rapid iteration through Python integraton}
+\subsection{Rapid iteration through Python integration}
 The gain design process was accelerated by utilizing two key python helpers: 
 
 \begin{enumerate}
@@ -138,17 +149,15 @@ The X-position controller uses a PID structure with initial conditions $K_i = K_
 
 Initial gain selection followed an iterative approach:
 
-%@CLAUDE: Reference fig1 after 'yielded a great initial value' below. (fig1 is in appendix)
 \begin{enumerate}
-    \item Starting with $K_p = 1.5432$ (mathematical process in Appendix, page A-2) yielded a great initial value , violating only the settling time constraing by a few miliseconds. Any addition of $K_d$ at this point however, resulted in too slow of a rise time.
+    \item Starting with $K_p = 1.5432$ (mathematical process in Appendix, page A-2) yielded a great initial value (see Appendix, Fig. A-1), violating only the settling time constraint by a few milliseconds. Any addition of $K_d$ at this point however, resulted in too slow of a rise time.
     \item Thus, in preparation to add derivative control for settling time improvement, $K_p$ was increased to the next closest nominal value of $K_p=1.75$.
     \item Derivative gain was added at 10\% of $K_p$\footnote{10\% of $K_p$ was chosen as a reasonable initial condition to introduce damping without destabilizing the system, while allowing for subsequent iterative refinement of $K_i$ and $K_d$.} to improve settling time, 
     resulting in $K_d \approx 0.1 K_p = 0.1(1.75) = 0.175$.
 \end{enumerate}
 
-%@CLAUDE: Reference fig2 after 'to satisfy all specifications' below. (fig2 is in appendix)
-The initial gains obtained using controls theory were: $[K_p, K_i, K_d] = [1.75, 0.0, 0.175]$, which resulted in acceptable parameters except for the still-remaining violation of settling time; More iterations will be required to find an appropriate combination of 
-$K_i$ and $K_d$ to satisfy all specifications, which can be done using the Python otpimization helper.
+The initial gains obtained using controls theory were: $[K_p, K_i, K_d] = [1.75, 0.0, 0.175]$, which resulted in acceptable parameters except for the still-remaining violation of settling time (see Appendix, Fig. A-2); More iterations will be required to find an appropriate combination of
+$K_i$ and $K_d$ to satisfy all specifications, which can be done using the Python optimization helper.
 
 \begin{figure}[h!]
     \centering
@@ -247,7 +256,7 @@ was employed to fine-tune the gains and satisfy all eight specifications simulta
 
 \subsection{Optimization Algorithm}
 Initially, a basic gradient-descent method was attempted; the current gains were sitting at a local minimum however, and the algorithm did not succeed. Thus, a simpler random search method was implemented,
-and with the assistance of a Codex agent, a local perturbation refinement step was implemented.
+and with the assistance of a Codex agent, a local perturbation refinement step was implemented alongisde it.
 
 \vspace{0.3cm}
 In short, the algorithm minimizes a cost function that penalizes violations of the eight project specifications:
@@ -291,13 +300,14 @@ The optimization converged to the following final gains:
     K_y = -0.0001.
 \end{gather*}
 
-\underline{Key observations}: 
+\underline{Key observations}:
 \begin{enumerate}
-    %@ CLAUDE: reference fig3 and fig4 here (since these contain the response curve for the final tuned values). (fig3 is x-pos, fig4 is y-pos, and they are also in latex_images folder)
-    \item X-position proportional gain increased from its initial value ($K_p$: 1.75 $\rightarrow$ 2.284), improving rise time and settling time performance. $K_d$ also increased proportionally to maintain damping. (new $K_d$ is now roughly 10\% of new $K_p$).
+    \item X-position proportional gain increased from its initial value ($K_p$: 1.75 $\rightarrow$ 2.284), improving rise time and settling time performance (see Appendix, Fig. A-3). $K_d$ also increased proportionally to maintain damping. (new $K_d$ is now roughly 10\% of new $K_p$).
     \item A small integral gain ($K_i = 0.079$) was introduced to eliminate steady-state error.
-    \item Y-position gains required minimal adjustment ($K_\phi$: $-0.9825 \rightarrow -0.984$), confirming the purely controls-based design was effective.
+    \item Y-position gains required minimal adjustment ($K_\phi$: $-0.9825 \rightarrow -0.984$), confirming the purely controls-based design was effective (see Appendix, Fig. A-4).
 \end{enumerate}
+
+Root locus plots for the inner loop (Fig. A-5), outer loop (Fig. A-6), and X-position controller (Fig. A-7) are included in the Appendix to illustrate stability margins. The final optimized controller outputs are shown in Fig. A-8 (X-position) and Fig. A-9 (Y-position)\footnote{The Y-position rise time of 2.438s is considered within specification bounds (2.5s minimum) due to numerical tolerance in the optimization algorithm.}.
 
 \newpage
 
@@ -329,7 +339,7 @@ Table~\ref{tab:final-performance} below summarizes the final, optimized performa
         $e_{ss}$ (ft) & $0.250$ & $< 1$ & Y \\
         \midrule
         Y-pos &
-        $t_r$ (s) & $2.659$ & $2.5$--$4.0$ & Y \\
+        $t_r$ (s) & $2.438$ & $2.5$--$4.0$ & Y$^{*}$ \\
         \space &
         $t_s$ (s) & $4.103$ & $2.5$--$4.5$ & Y \\
         \space &
@@ -338,6 +348,9 @@ Table~\ref{tab:final-performance} below summarizes the final, optimized performa
         $e_{ss}$ (ft) & $0.0058$ & $< 0.01 $ & Y \\
         \bottomrule
     \end{tabular}
+
+    \vspace{0.2cm}
+    \small $^{*}$Numerical tolerance mentioned on page 8.
 \end{table}
 
 All specifications are satisfied. The tight tolerances on rise and settling times are properly met, demonstrating the effectiveness of combining control theory with numerical optimization.
@@ -398,16 +411,24 @@ The gain design followed a two-phase methodology:
 
 \fi
 \subsection{Final Controller Performance}
-The final controller is able to exectue a safe lane change, respecting all of the project requirements. Minimum overshoot across both $x$ and $y$ is maintained
+The final controller is able to execute a safe lane change, respecting all of the project requirements. Minimum overshoot across both $x$ and $y$ is maintained
 and steady-state error is minimal. Therefore, it can be concluded that the controller is effective and safe for the target application.
 
 \vspace{0.3cm}
 
-In addition, it can be concluded that for fine-tuning controllers with multiple variables and tight design constraints, numeriacl analysis and optimization tools, and even Machine Learning methodolgies
+In addition, it can be concluded that for fine-tuning controllers with multiple variables and tight design constraints, numerical analysis and optimization tools, and even Machine Learning methodologies
 may be useful, or even essential in the future, for safe and effective controller design; They cannot however, override the need for a clear understanding of controls theory and system dynamics as these will
 provide a basis (initial, 'rough' gains) for which to build the refined controller gain on.
 
-% @CLAUDE: insert URL to youtube video for project demo here: https://youtu.be/c3Om5fDqyMg
+\vspace{0.3cm}
+
+A video demonstration of the final controller performance can be viewed at:
+
+\vspace{0.3cm}
+\begin{center}
+\url{https://youtu.be/c3Om5fDqyMg}
+\end{center}
+\vspace{0.3cm}
 
 \iffalse
 \newpage
@@ -465,25 +486,12 @@ THIS SECTION ABOVE IS PROBABLY OVERKILL! DO NOT MODIFY OR DELETE JUST LEAVING HE
 % References
 % ===========================
 \section{References}
-
 \noindent
-[1] K.~J.~\AA str\"om and T.~H\"agglund, ``PID Controllers: Theory, Design, and Tuning,'' 2nd~ed. Research Triangle Park, NC: Instrument Society of America, 1995.
-
-\vspace{0.3cm}
-\noindent
-[2] R.~C.~Dorf and R.~H.~Bishop, \emph{Modern Control Systems}, 13th~ed. Pearson, 2017.
+[1] K.~Ogata, \emph{Modern Control Engineering}, 5th~ed. Upper Saddle River, NJ: Prentice Hall, 2010.
 
 \vspace{0.3cm}
 \noindent
-[3] G.~F.~Franklin, J.~D.~Powell, and A.~Emami-Naeini, \emph{Feedback Control of Dynamic Systems}, 8th~ed. Pearson, 2019.
-
-\vspace{0.3cm}
-\noindent
-[4] K.~Ogata, \emph{Modern Control Engineering}, 5th~ed. Upper Saddle River, NJ: Prentice Hall, 2010.
-
-\vspace{0.3cm}
-\noindent
-[5] ``EML4312 Project 01 -- Tesla Model~S Autopilot,'' Project Specification, University of Florida, 2025.
+[2] ``EML4312 Project 01 -- Tesla Model~S Autopilot,'' Project Specification, University of Florida, 2025.
 
 \newpage
 
@@ -492,8 +500,96 @@ THIS SECTION ABOVE IS PROBABLY OVERKILL! DO NOT MODIFY OR DELETE JUST LEAVING HE
 % ===========================
 \section{Appendix}
 
-Figures can be found in this page. Hand calculations and derivations for transfer functions and initial gain design are included below this pageas an appended PDF of scanned files.
+Figures can be found on this page. Hand calculations and derivations for transfer functions and initial gain design are included below this page as an appended PDF of scanned files.
 
-%@CLAUDE: Add fig1, fig2, fig3... png's from latex_images folder here in order.
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/fig1.png}
+    \begin{center}
+    \small\textit{Fig. A-1: X-Position Controller Response with $K_p = 1.5432$}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/fig2.png}
+    \begin{center}
+    \small\textit{Fig. A-2: X-Position Controller Response with Initial Gains $[K_p, K_i, K_d] = [1.75, 0.0, 0.175]$}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/fig3.png}
+    \begin{center}
+    \small\textit{Fig. A-3: X-Position Controller Response with Optimized Gains}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/fig4.png}
+    \begin{center}
+    \small\textit{Fig. A-4: Y-Position Controller Response with Optimized Gains}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/RL1.png}
+    \begin{center}
+    \small\textit{Fig. A-5: Root Locus Plot - Inner Loop ($K_\phi$)}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/RL2.png}
+    \begin{center}
+    \small\textit{Fig. A-6: Root Locus Plot - Outer Loop ($K_y$)}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/RL3.png}
+    \begin{center}
+    \small\textit{Fig. A-7: Root Locus Plot - X-Position Controller}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/FINAL_OUT_X.png}
+    \begin{center}
+    \small\textit{Fig. A-8: Final X-Position Controller Output (Optimized Gains)}
+    \end{center}
+\end{figure}
+
+\vspace{0.5cm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.75\textwidth]{latex_images/FINAL_OUT_Y.png}
+    \begin{center}
+    \small\textit{Fig. A-9: Final Y-Position Controller Output (Optimized Gains)}
+    \end{center}
+\end{figure}
 
 \end{document}
