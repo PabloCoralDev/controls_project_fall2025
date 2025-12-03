@@ -1,0 +1,461 @@
+\documentclass[12pt]{report}
+
+% ===========================
+% Packages
+% ===========================
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{booktabs}
+\geometry{margin=1in}
+
+% Roman numerals for sections, roman for subsections
+\renewcommand\thesection{\Roman{section}.}
+\renewcommand\thesubsection{\roman{subsection}.}
+
+\begin{document}
+
+% ===========================
+% Title Page
+% ===========================
+\title{Tesla Autopilot Controller\\[4pt]
+\large Gain Design Report - EML4312}
+\author{Pablo F. Coral}
+\date{December 1st, 2025}
+\maketitle
+
+\tableofcontents
+\newpage
+
+% ===========================
+% Executive Summary
+% ===========================
+\chapter*{Project Summary}
+\addcontentsline{toc}{chapter}{Executive Summary}
+
+This report documents the systematic design of a cascaded control system that performs
+autonomous lane-change maneuvers for a Tesla Model~S cruising at 70~mph. The autopilot
+uses a PID controller for longitudinal control (x-position, parallel to the lane) and a cascaded,
+proportional-only controller for lateral control (y-position, perpendicular to the current lane and pointing to the next lane). The design methodology consisted of two phases:
+
+\begin{enumerate}
+    \item \textbf{Control theory} to obtain initial gains using
+    standard second-order approximations and dominant pole methods.
+    \item \textbf{Agentic-assisted optimization} to refine the gains and
+    satisfy tight rise-time and settling-time specifications simultaneously.
+\end{enumerate}
+
+All eight project specifications on rise time, settling time, overshoot, and
+steady-state error were satisfied by the final controller.
+
+\newpage
+
+% ===========================
+% I. System Models and Specifications
+% ===========================
+\section{System Models and Specifications}
+
+\subsection{X-Position (Longitudinal) Plant}
+
+From the block diagram (derivation shown in Appendix), the closed-loop transfer function for the X-position control system is shown below. 
+For initial analysis, only proportional control is considered for simplification ($K_i = 0, K_d = 0$):
+\begin{equation*}
+    T_x(s) = \frac{5K_p}{s^2 + 5s + 5K_p}.
+\end{equation*}
+
+Proportional control better reflects the intrinsic properties of the system dynamics (plant), thus simpmlifying initial gain design. 
+Integral and Derivative gains can be added to influence specific system properties (overshoot, steady-state error) later in the design process.
+
+% @CLAUDE : please add a space here!
+\noindent{The performance requirements for a $22$~ft step in $x$ are:}
+\begin{itemize}
+    \item Rise time:\quad $0.8 < t_r < 1.1$~s,
+    \item Settling time:\quad $0.8 < t_s < 1.3$~s,
+    \item Percent overshoot:\quad $PO < 20\%$,
+    \item Steady-state error:\quad $e_{ss} < 1$~ft.
+\end{itemize}
+
+\subsection{Y-Position (Lateral) Plant with Cascaded Control}
+
+The lateral autopilot uses two coupled loops. We can, once again, also begin with proportional-only control for simplification:
+\begin{itemize}
+    \item \textbf{Inner loop:} $K_\phi$ controls turn angle $\phi$
+    \item \textbf{Outer loop:} $K_y$ controls lateral position $y$
+\end{itemize}
+
+From the block diagram (derivation also shown in Appendix), the closed-loop transfer function is:
+\begin{equation*}
+    T_y(s) = \frac{y}{y_c} = \frac{100 K_y K_\phi V_o}{s^2 + (100 + 100K_\phi)s + 100 K_y K_\phi V_o},
+\end{equation*}
+where $V_o = 102.69$~ft/s (70 mph).
+
+\noindent{The performance requirements for a $12$~ft step in $y$ are:}
+\begin{itemize}
+    \item Rise time:\quad $2.5 < t_r < 4.0$~s,
+    \item Settling time:\quad $2.5 < t_s < 4.5$~s,
+    \item Percent overshoot:\quad $PO < 10\%$,
+    \item Steady-state error:\quad $e_{ss} = 0$~ft (exact lane centering).
+\end{itemize}
+
+\newpage
+
+% ===========================
+% II. Initial Gain Design Using Control Theory
+% ===========================
+\section{Initial Gain Design Using Control Theory}
+
+\subsection{X-Position PID Controller}
+
+The X-position controller uses a PID structure,
+
+\begin{equation*}
+    K_x(s) = K_p + \frac{K_i}{s} + K_d s.
+\end{equation*}
+
+Starting with \begin{equation*} K_i = K_d = 0. \end{equation*}
+
+
+Initial gain selection followed an iterative approach:
+
+% @CLAUDE : Make the stuff below an ordered list! the 'step' thing looks crammed.
+
+\noindent\textbf{Step 1:} Starting with $K_p = 0.065$ (mathematical process in Appendix) yielded a rise time near 1.0~s but was too slow overall, with excessive steady-state error.
+
+\noindent\textbf{Step 2:} Increasing to $K_p = 1.0$ improved response speed but still violated rise and settling time requirements.
+
+\noindent\textbf{Step 3:} Further increasing to $K_p = 1.5$ achieved a rise time near the target. However, the system was not settling fast enough, indicating insufficient damping.
+
+% @CLAUDE : Add a =~ (approximately) sign in the equation below:
+\noindent\textbf{Step 4:} Following the Ziegler-Nichols tuning rule ($K_i K_d  0.1K_p$)derivative gain was added at approximately 10\% of $K_p$:
+\begin{equation*}
+    K_d \approx 0.1 K_p = 0.1(1.5) = 0.15.
+\end{equation*}
+Derivative control increases the damping ratio and rotates the root locus branches leftward, improving settling time.
+
+
+\noindent\textbf{Step 5:} Hand-tuning between $K_p = 1.5$ and $K_p = 2.5$showed that $K_p$ to 1.75 yielded the best rise time performance. 
+Adjusting the derivative gain proportionally to $K_d = 0.175$ maintained the damping ratio., and prevented a violoation of the overshoot constraint.
+
+% @CLAUDE: center the equations below! They're messy at the moment
+\noindent{The initial gains obtained using controls theory were:}
+\begin{align*}
+    K_{p,\text{initial}} &= 1.75, 
+    K_{i,\text{initial}} &= 0.0 
+    K_{d,\text{initial}} &= 0.175.
+\end{align*}
+
+\subsection{Y-Position Controller}
+
+% @CLAUDE: improve the 'denmoinator of T_y' part below. It's messy.
+The Y-position controller uses two proportional gains in a coupled structure. From the closed-loop transfer function derived earlier, the characteristic equation is:
+\begin{equation*}
+    s^2 + (100 + 100K_\phi)s + 100 K_y K_\phi V_o = 0. (denominator of T_y)
+\end{equation*}
+
+\noindent{Comparing with the standard second-order form:}
+\begin{equation*}
+    s^2 + 2\zeta \omega_n s + \omega_n^2 = 0,
+\end{equation*}
+we can relate the gains to the natural frequency and damping ratio:
+\begin{align*}
+    \omega_n^2 &= 100 K_y K_\phi V_o, \\
+    2\zeta \omega_n &= 100 + 100K_\phi.
+\end{align*}
+
+\noindent\textbf{Initial Gain Calculation:}
+
+Targeting a rise time at the midpoint of the specification range ($t_r \approx 3.25$~s) and using the approximation $t_r \approx 1.8/\omega_n$:
+\begin{equation*}
+    \omega_n \approx \frac{1.8}{3.25} \approx 0.55~\text{rad/s}.
+\end{equation*}
+
+% @CLAUDE: check the equations below: We are not doing 'less than' constraints, but rather, I am choosing to be at the limit for overshoot, and find out zeta at overshoot = 10%; We should find out that Zeta at this conditionos is roughly 0.592
+Since we have 4 unknonws ($K_\phi$, $K_y$, $\zeta$, $\omega_n$) but only 3 equations, we need to intoduce additional constraints. 
+We can do so by calculating zeta at our limit conditions of 10\% overshoot, as specified by the project requirements:
+\begin{equation*}
+    PO = 100 e^{-\zeta\pi/\sqrt{1-\zeta^2}} < 10\%
+    \quad\Rightarrow\quad
+    \zeta \gtrsim 0.6.
+\end{equation*}
+
+% @CLAUDE: zeta should be about 0.592, not 0.6; Keep sig figs consistent though
+Using $\omega_n = 0.55$ and $\zeta = 0.6$:
+\begin{align*}
+    100 + 100K_\phi &= 2(0.6)(0.55) = 0.66
+    \quad\Rightarrow\quad K_\phi \approx -0.99, \\
+    100 K_y K_\phi V_o &= (0.55)^2 = 0.30
+    \quad\Rightarrow\quad K_y \approx -0.00003.
+\end{align*}
+
+% @CLAUDE: None of these paragraphs have spaces between them; Please add them!
+\noindent\textbf{Manual Tuning:}
+
+Testing these gains showed the  y-position changed too slowly due to the extremely small magnitude of $K_y$. Increasing to $K_y = -0.0001$ (the next closest order of mangitude) provided much better results, but resulted in overshoot; Since further decreasing
+$K_y$ would significantly slow the response, it was determined that this overshoot came as a result of an overly aggressive turn angle.
+
+Thus, $K_\phi$ was adjusted in increments of 0.05 from $-1.0$ until $-0.980$. At $K_\phi = -0.980$ the response was slightly slow, and at $K_\phi = -0.985$ the response was slightly too fast, so a midpoint of $K_\phi = -0.9825$ was selected.
+
+\noindent{Therefore, the initial gains for the y-position loop from controls theory were:}
+\begin{align*}
+    K_{\phi,\text{initial}} &= -0.9825, \\
+    K_{y,\text{initial}} &= -0.0001.
+\end{align*}
+
+Which did not necessitate integral nor derivative control due to the overdamped nature of the system and the pre-existing 
+integrator in the system, $\frac{V_0}{s}$, which ensured near-zero steady-state error.
+
+% @CLAUDE: Italicize the whole note, or make it into a footnote (footnote preferred)
+Note: The negative signs arise from the sign conventions in the feedback loops; the magnitudes indicate the controller strengths.
+
+\newpage
+
+% ===========================
+% III. Numerical Optimization
+% ===========================
+\section{Numerical Optimization}
+
+\subsection{Motivation}
+
+The gains obtained from controls theory placed the system close to meeting all specifications, but slight violations to the project constraints remained. At this point, the bulk of the controls-based work was done, and Numerical optimization 
+was employed to fine-tune the gains and satisfy all eight specifications simultaneously.
+
+\subsection{Optimization Algorithm}
+Initially, a basic gradient-descent method was attempted; the current gains were sitting at a local minimum however, and the algorithm did not succeed. Thus, a simpler randmo search method was implemented,
+and with the assistance of a Codex agent, a local perturbation refinement step was implemented.
+
+% @CLAUDE: Don't forget to ask me for the link to the github repo later, before I finalize the project!!
+In short, the algorithm minimizes a cost function that penalizes violations of the eight project specifications:
+\begin{equation*}
+    J = \sum_i w_i \cdot \text{(violation of spec}_i)^2,
+\end{equation*}
+where $w_i$ are penalty weights, and violations are computed as the squared distance from specification bounds. The optimization code can be found in the 
+the following github repository: \url{} 
+
+\noindent\textbf{Basic algorithm Steps:}
+\begin{enumerate}
+    \item \textbf{Random Search:} Generate 500 random gain combinations within bounded search ranges.
+    \item \textbf{Evaluation:} For each candidate, simulate the closed-loop system using scipy.signal, and compute all performance metrics.
+    \item \textbf{Cost Calculation:} Penalize any metric outside its specification window.
+    \item \textbf{Local Refinement:} Around the best candidates, perform small perturbations to further reduce cost.
+    \item \textbf{Convergence:} Stop when a gain set satisfies all specifications (cost = 0).
+\end{enumerate}
+
+% @CLAUDE: bounded search ranges should be all in a single column (I see two columns. One that has Kp, Kd, Ky and another that has Ki and Kphi). Also, do specify that Kp, Ki and Kd correspond to Kx
+The bounded search ranges were:
+\begin{align*}
+    1.0 &\leq K_p \leq 6.0, & 0.05 &\leq K_i \leq 0.30, \\
+    0.0 &\leq K_d \leq 0.50, & 0.4 &\leq K_\phi \leq 1.0, \\
+    0.015 &\leq K_y \leq 0.035.
+\end{align*}
+
+\subsection{Optimized Gains}
+
+% @CLAUDE: Same thing as before, the equations below should be centered in a single column!
+The optimization converged to the following final gains:
+\begin{align*}
+    K_p &= 2.284, &
+    K_i &= 0.079, &
+    K_d &= 0.234, \\[4pt]
+    K_\phi &= -0.984, &
+    K_y &= -0.0001.
+\end{align*}
+
+% @CLAUDE: Underline 'Key Observations'
+Key observations: 
+\begin{enumerate}
+    \item X-position gains increased from the initial values (Kp: 1.75 $\rightarrow$ 2.284), improving rise and settling time performance.
+    \item A small integral gain ($K_i = 0.079$) was introduced to eliminate steady-state error.
+    \item Y-position gains required minimal adjustment ($K_\phi$: $-0.9825 \rightarrow -0.984$), confirming the purely controls-based design was effective.
+\end{enumerate}
+
+\newpage
+
+% ===========================
+% IV. Final Performance
+% ===========================
+\section{Final Performance}
+
+\subsection{Optimized Results}
+
+Table~\ref{tab:final-performance} below summarizes the final, optimized performance metrics vs. specifications.
+
+
+% @CLAUDE: Change 'status' to 'Satisfied? (Y/N)' and have Y/N values instead of 'satisfied'
+\begin{table}[h!]
+    \centering
+    \caption{Final Performance vs.\ Specifications}
+    \label{tab:final-performance}
+    \begin{tabular}{lllll}
+        \toprule
+        Channel & Metric & Result & Spec & Status \\
+        \midrule
+        X-pos &
+        $t_r$ (s) & $0.832$ & $0.8$--$1.1$ & satisfied \\
+        X-pos &
+        $t_s$ (s) & $1.292$ & $0.8$--$1.3$ & satisfied \\
+        X-pos &
+        $PO$ (\%) & $0.41$ & $< 20$ & satisfied \\
+        X-pos &
+        $e_{ss}$ (ft) & $0.250$ & $< 1$ & satisfied \\
+        \midrule
+        Y-pos &
+        $t_r$ (s) & $2.659$ & $2.5$--$4.0$ & satisfied \\
+        Y-pos &
+        $t_s$ (s) & $4.103$ & $2.5$--$4.5$ & satisfied \\
+        Y-pos &
+        $PO$ (\%) & $1.03$ & $< 10$ & satisfied \\
+        Y-pos &
+        $e_{ss}$ (ft) & $0.0058$ & $< 0.01$ & satisfied \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+All specifications are satisfied. The tight tolerances on rise and settling times are properly met, demonstrating the effectiveness of combining control theory with numerical optimization.
+
+\subsection{Initial vs.\ Optimized Gains}
+
+% @CLAUDE: Make my note italicized here too!
+For the X-position loop:
+\begin{align*}
+    K_p &: 1.75 \;\rightarrow\; 2.284 \\
+    K_i &: 0.0 \;\rightarrow\; 0.079 \quad (\text{new gain}), \\
+    K_d &: 0.175 \;\rightarrow\; 0.234.
+\end{align*}
+Note: Derivative control remains within the ~10\% of proportional gain guideline established by Ziegler-Nichols.
+
+For the Y-position loops:
+\begin{align*}
+    K_\phi &: -0.9825 \;\rightarrow\; -0.984, \\
+    K_y &: -0.0001 \;\rightarrow\; -0.0001 \quad (\text{unchanged}).
+\end{align*}
+
+The control-theoretic design provided excellent initial estimates, particularly for the Y-position controller which required essentially no adjustment. The X-position gains were increased by roughly 30\% to meet the faster rise and settling time requirements, and a small integral term was added to improve steady-state accuracy.
+
+\newpage
+
+% ===========================
+% V. Conclusions
+% ===========================
+\section{Conclusions}
+
+\subsection{Design Methodology Summary}
+
+% @CLAUDE: Make the steps go a., b, c, etc. (within step 1 and 2)
+The gain design followed a two-phase methodology:
+\begin{enumerate}
+    \item \textbf{Controls Theory Phase:}
+    \begin{itemize}
+        \item Derived closed-loop transfer functions from block diagrams
+        \item Used second-order system characteristics and standard tuning rules (Ziegler-Nichols) to obtain initial gain estimates
+        \item Iteratively tested and manually adjusted gains based on simulation results
+    \end{itemize}
+    \item \textbf{Numerical Optimization Phase:}
+    \begin{itemize}
+        \item Implemented a random search algorithm with local refinement
+        \item Minimized a cost function penalizing specification violations
+        \item Fine-tuned all five gains to simultaneously satisfy all eight project requirements
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Key Findings}
+
+\begin{enumerate}
+    \item Classical controls theory provided strong initial estimates, placing gains within 30\% of optimal values.
+    \item The Y-position cascaded controller required minimal optimization, demonstrating the effectiveness of second-order system analysis.
+    \item Numerical optimization was essential for satisfying tight timing windows that were difficult to achieve through manual tuning alone.
+    \item The combination of analytical design and computational refinement proved more efficient than either approach alone.
+\end{enumerate}
+
+\subsection{Final Controller Performance}
+
+The final autopilot controller successfully:
+\begin{itemize}
+    \item Executes a safe lane change maneuver in under 4.5 seconds
+    \item Maintains minimal overshoot (< 1.5\%) in both longitudinal and lateral directions
+    \item Achieves accurate steady-state tracking (< 0.01 ft lateral error, < 0.25 ft longitudinal error)
+    \item Meets all eight project specifications simultaneously
+\end{itemize}
+
+\iffalse
+\newpage
+
+% ===========================
+% Appendix: Formulas Used
+% ===========================
+\section*{Appendix: Formulas Used}
+\addcontentsline{toc}{section}{Appendix: Formulas Used}
+
+\subsection*{Second-Order System Approximations}
+
+Given
+\begin{equation*}
+    s^2 + 2\zeta \omega_n s + \omega_n^2 = 0,
+\end{equation*}
+common approximations are:
+\begin{align*}
+    t_r &\approx \frac{1.8}{\omega_n}
+    && \text{(rise time, $0.5\lesssim\zeta\lesssim0.7$)}, \\
+    t_s &\approx \frac{4}{\zeta \omega_n}
+    && \text{(settling time, 2\% criterion)}, \\
+    PO &= 100 e^{-\zeta\pi/\sqrt{1-\zeta^2}}
+    && \text{(percent overshoot)}.
+\end{align*}
+
+\subsection*{Overdamped Dominant Pole Method}
+
+For a real dominant pole $s_{\text{dom}}$ (heavily overdamped systems),
+\begin{align*}
+    t_r &\approx \frac{2.2}{|s_{\text{dom}}|}, \\
+    t_s &\approx \frac{4}{|s_{\text{dom}}|}, \\
+    PO &\approx 0\%.
+\end{align*}
+
+\subsection*{Steady-State Error for Type-1 Systems}
+
+For a unity-feedback system with loop transfer function $L(s)$:
+\begin{equation*}
+    T(s) = \frac{L(s)}{1+L(s)}.
+\end{equation*}
+For a step input of amplitude $A$:
+\begin{equation*}
+    y_{ss} = \lim_{s\to0} s T(s)\frac{A}{s} = A T(0).
+\end{equation*}
+If $L(s)$ has one integrator (Type-1), then $T(0) = 1$ and the steady-state
+error for a step input is zero.
+
+THIS SECTION ABOVE IS PROBABLY OVERKILL! DO NOT MODIFY OR DELETE JUST LEAVING HERE FOR NOW.
+\fi
+
+\newpage
+
+% ===========================
+% References
+% ===========================
+\begin{thebibliography}{9}
+    \bibitem{astrom_pid}
+    K.~J.~\AA str\"om and T.~H\"agglund,
+    ``PID Controllers: Theory, Design, and Tuning,'' 2nd~ed.
+    Research Triangle Park, NC: Instrument Society of America, 1995.
+
+    \bibitem{dorf}
+    R.~C.~Dorf and R.~H.~Bishop,
+    \emph{Modern Control Systems}, 13th~ed.
+    Pearson, 2017.
+
+    \bibitem{franklin}
+    G.~F.~Franklin, J.~D.~Powell, and A.~Emami-Naeini,
+    \emph{Feedback Control of Dynamic Systems}, 8th~ed.
+    Pearson, 2019.
+
+    \bibitem{ogata}
+    K.~Ogata,
+    \emph{Modern Control Engineering}, 5th~ed.
+    Upper Saddle River, NJ: Prentice Hall, 2010.
+
+    \bibitem{project}
+    ``EML4312 Project 01 -- Tesla Model~S Autopilot,''
+    Project Specification, University of Florida, 2025.
+\end{thebibliography}
+
+\end{document}

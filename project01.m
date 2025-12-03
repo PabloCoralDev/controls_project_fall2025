@@ -165,7 +165,7 @@ grid on
 %
 % STUDENT : Choose a control gain
 %
-Kp = -0.000136;                          % proportional controller
+Kp = -.0001;                          % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
