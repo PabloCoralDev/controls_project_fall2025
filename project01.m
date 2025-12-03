@@ -54,9 +54,9 @@ grid on
 %
 % STUDENT : Choose control gains
 %
-Kp = 2.189;                           % proportional controller
-Ki = 0.078;                           % integral controller
-Kd = 0.157;                           % derivative controller
+Kp = 1.5;                           % proportional controller
+Ki = 0.000;                           % integral controller
+Kd = 0.15;                           % derivative controller
 
 %   
 % Define PID controller
@@ -117,7 +117,7 @@ grid on
 %
 % STUDENT : Choose control gains
 %
-Kp = 0.560;                           % proportional controller
+Kp = -0.982;                           % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
@@ -165,7 +165,7 @@ grid on
 %
 % STUDENT : Choose a control gain
 %
-Kp = 0.0236;                          % proportional controller
+Kp = -0.000136;                          % proportional controller
 Ki = 0.0;                             % integral controller
 Kd = 0.0;                             % derivative controller
 
